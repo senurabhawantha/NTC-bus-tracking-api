@@ -13,7 +13,7 @@ const dailyLocationSchema = new mongoose.Schema({
 const busSchema = new mongoose.Schema({
   bus_id: { type: Number, unique: true, index: true },
   route_id: Number,
-  status: { type: String, enum: ['On Time', 'Delayed'], default: 'On Time' }, // current (today) status
+  status: { type: String, enum: ['On Time', 'Delayed'], default: 'On Time' }, 
   current_location: {
     latitude: Number,
     longitude: Number
