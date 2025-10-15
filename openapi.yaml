@@ -5,7 +5,7 @@ info:
   description: >
     RESTful API for real-time bus tracking and headway-based schedules.
 servers:
-  - url: https://YOUR_DEPLOYED_DOMAIN_HERE
+  - url: https://expresstravels.up.railway.app
 paths:
   /routes:
     get:
