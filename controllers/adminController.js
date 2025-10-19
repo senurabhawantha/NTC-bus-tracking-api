@@ -2,6 +2,7 @@
 const Route = require('../models/route');
 const Bus = require('../models/bus');
 
+// Create a route with your numeric style { route_id, name }
 async function createRoute(req, res) {
   const { route_id, name } = req.body || {};
   if (route_id == null || !name) {
@@ -11,9 +12,10 @@ async function createRoute(req, res) {
   if (exists) return res.status(409).json({ message: 'route_id already exists' });
 
   const route = await Route.create({ route_id: Number(route_id), name });
-  res.status(201).json({ status: 'success', data: route });
+  return res.status(201).json({ status: 'success', data: route });
 }
 
+// Create a bus with your numeric style { bus_id, route_id, plateNumber, capacity }
 async function createBus(req, res) {
   const { bus_id, route_id, plateNumber, capacity } = req.body || {};
   if (bus_id == null) return res.status(400).json({ message: 'bus_id is required' });
@@ -28,7 +30,7 @@ async function createBus(req, res) {
     capacity
   });
 
-  res.status(201).json({ status: 'success', data: bus });
+  return res.status(201).json({ status: 'success', data: bus });
 }
 
 module.exports = { createRoute, createBus };
