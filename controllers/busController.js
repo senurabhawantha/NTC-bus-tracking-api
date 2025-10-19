@@ -154,6 +154,120 @@ async function updateBusStatus(req, res) {
   }
 }
 
+/**
+ * POST /buses (admin only)
+ * Create a new bus
+ */
+async function createBus(req, res) {
+  try {
+    const { bus_id, route_id, current_location, status, dailyLocations } = req.body;
+    
+    // Validate required fields
+    if (!bus_id || !route_id) {
+      return res.status(400).json({ 
+        message: 'bus_id and route_id are required' 
+      });
+    }
+    
+    // Check if bus already exists
+    const existingBus = await Bus.findOne({ bus_id: Number(bus_id) });
+    if (existingBus) {
+      return res.status(400).json({ 
+        message: 'Bus with this ID already exists' 
+      });
+    }
+    
+    const busData = {
+      bus_id: Number(bus_id),
+      route_id: Number(route_id),
+      current_location: current_location || { latitude: 0, longitude: 0 },
+      status: status || 'On Time',
+      last_updated: new Date()
+    };
+    
+    if (dailyLocations) {
+      busData.dailyLocations = dailyLocations;
+    }
+    
+    const bus = new Bus(busData);
+    await bus.save();
+    
+    res.status(201).json({
+      message: 'Bus created successfully',
+      bus
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ 
+      message: 'Error creating bus',
+      error: err.message 
+    });
+  }
+}
+
+/**
+ * PUT /buses/:bus_id (admin only)
+ * Update entire bus record
+ */
+async function updateBus(req, res) {
+  try {
+    const bus_id = Number(req.params.bus_id);
+    const { route_id, current_location, status, dailyLocations } = req.body;
+    
+    const bus = await Bus.findOne({ bus_id });
+    if (!bus) {
+      return res.status(404).json({ message: 'Bus not found' });
+    }
+    
+    // Update fields
+    if (route_id !== undefined) bus.route_id = Number(route_id);
+    if (current_location) bus.current_location = current_location;
+    if (status) bus.status = status;
+    if (dailyLocations) bus.dailyLocations = dailyLocations;
+    
+    bus.last_updated = new Date();
+    await bus.save();
+    
+    res.json({
+      message: 'Bus updated successfully',
+      bus
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ 
+      message: 'Error updating bus',
+      error: err.message 
+    });
+  }
+}
+
+/**
+ * DELETE /buses/:bus_id (admin only)
+ * Delete a bus
+ */
+async function deleteBus(req, res) {
+  try {
+    const bus_id = Number(req.params.bus_id);
+    
+    const bus = await Bus.findOneAndDelete({ bus_id });
+    
+    if (!bus) {
+      return res.status(404).json({ message: 'Bus not found' });
+    }
+    
+    res.json({
+      message: 'Bus deleted successfully',
+      deletedBusId: bus_id
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ 
+      message: 'Error deleting bus',
+      error: err.message 
+    });
+  }
+}
+
 module.exports = {
   getAllBuses,
   getBusById,
@@ -161,6 +275,9 @@ module.exports = {
   getBusStatus,
   updateBusLocation,
   updateBusStatus,
+  createBus,
+  updateBus,
+  deleteBus,
 };
 
 
