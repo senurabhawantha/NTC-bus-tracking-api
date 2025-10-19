@@ -1,0 +1,964 @@
+openapi: 3.0.3
+info:
+  title: NTC Real-Time Bus Tracking API
+  version: 2.0.0
+  description: >
+    RESTful API for real-time bus tracking with JWT authentication, role-based access control, and full admin CRUD operations.
+servers:
+  - url: https://expresstravels.up.railway.app
+    description: Production server
+  - url: http://localhost:5000
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: User authentication and profile management
+  - name: Admin - Users
+    description: Admin endpoints for user management (Admin only)
+  - name: Admin - Buses
+    description: Admin endpoints for bus management (Admin only)
+  - name: Admin - Routes
+    description: Admin endpoints for route management (Admin only)
+  - name: Admin - Dashboard
+    description: Admin dashboard statistics (Admin only)
+  - name: Buses
+    description: Public bus information and tracking
+  - name: Routes
+    description: Public route information and schedules
+
+paths:
+  # ==================== AUTHENTICATION ====================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error or user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and receive JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /auth/profile:
+    get:
+      tags:
+        - Authentication
+      summary: Get user profile
+      description: Get authenticated user's profile information
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+    
+    put:
+      tags:
+        - Authentication
+      summary: Update user profile
+      description: Update authenticated user's profile information
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "John Doe Updated"
+                email:
+                  type: string
+                  example: "john.updated@example.com"
+      responses:
+        '200':
+          description: Profile updated successfully
+        '400':
+          description: Validation error
+        '401':
+          description: Not authenticated
+  
+  /auth/change-password:
+    put:
+      tags:
+        - Authentication
+      summary: Change password
+      description: Change authenticated user's password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - currentPassword
+                - newPassword
+              properties:
+                currentPassword:
+                  type: string
+                  example: "oldpassword123"
+                newPassword:
+                  type: string
+                  example: "newpassword123"
+      responses:
+        '200':
+          description: Password changed successfully
+        '400':
+          description: Validation error or incorrect current password
+        '401':
+          description: Not authenticated
+  
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh JWT token
+      description: Get a new JWT token before the current one expires
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token:
+                    type: string
+        '401':
+          description: Not authenticated
+
+  # ==================== ADMIN - USERS ====================
+  /admin/users:
+    get:
+      tags:
+        - Admin - Users
+      summary: Get all users (Admin only)
+      description: Get list of all users with pagination and filtering
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Items per page
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [user, operator, admin]
+          description: Filter by role
+        - in: query
+          name: isActive
+          schema:
+            type: boolean
+          description: Filter by active status
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search by name or email
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pages:
+                        type: integer
+                      limit:
+                        type: integer
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+    
+    post:
+      tags:
+        - Admin - Users
+      summary: Create new user (Admin only)
+      description: Create a new user with any role
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created successfully
+        '400':
+          description: Validation error or user already exists
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+  
+  /admin/users/{id}:
+    get:
+      tags:
+        - Admin - Users
+      summary: Get user by ID (Admin only)
+      description: Get specific user details
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+        '404':
+          description: User not found
+    
+    put:
+      tags:
+        - Admin - Users
+      summary: Update user (Admin only)
+      description: Update user details including role
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                role:
+                  type: string
+                  enum: [user, operator, admin]
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: User updated successfully
+        '400':
+          description: Validation error
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+        '404':
+          description: User not found
+    
+    delete:
+      tags:
+        - Admin - Users
+      summary: Delete user (Admin only)
+      description: Delete a user (cannot delete yourself)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        '200':
+          description: User deleted successfully
+        '400':
+          description: Cannot delete your own account
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+        '404':
+          description: User not found
+  
+  /admin/users/{id}/reset-password:
+    put:
+      tags:
+        - Admin - Users
+      summary: Reset user password (Admin only)
+      description: Reset a user's password
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - newPassword
+              properties:
+                newPassword:
+                  type: string
+                  example: "newpassword123"
+      responses:
+        '200':
+          description: Password reset successfully
+        '400':
+          description: Validation error
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+        '404':
+          description: User not found
+
+  # ==================== ADMIN - BUSES ====================
+  /admin/buses:
+    post:
+      tags:
+        - Admin - Buses
+      summary: Create new bus (Admin only)
+      description: Create a new bus in the system
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bus_id
+                - route_id
+              properties:
+                bus_id:
+                  type: integer
+                  example: 999
+                route_id:
+                  type: integer
+                  example: 1
+                current_location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                      example: 6.9271
+                    longitude:
+                      type: number
+                      example: 79.8612
+                status:
+                  type: string
+                  enum: ["On Time", "Delayed"]
+                  example: "On Time"
+      responses:
+        '201':
+          description: Bus created successfully
+        '400':
+          description: Validation error or bus already exists
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+  
+  /admin/buses/{bus_id}:
+    put:
+      tags:
+        - Admin - Buses
+      summary: Update bus (Admin only)
+      description: Update bus details
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: bus_id
+          required: true
+          schema:
+            type: integer
+          description: Bus ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                route_id:
+                  type: integer
+                current_location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+                status:
+                  type: string
+                  enum: ["On Time", "Delayed"]
+      responses:
+        '200':
+          description: Bus updated successfully
+        '400':
+          description: Validation error
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+        '404':
+          description: Bus not found
+    
+    delete:
+      tags:
+        - Admin - Buses
+      summary: Delete bus (Admin only)
+      description: Delete a bus from the system
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: bus_id
+          required: true
+          schema:
+            type: integer
+          description: Bus ID
+      responses:
+        '200':
+          description: Bus deleted successfully
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+        '404':
+          description: Bus not found
+
+  # ==================== ADMIN - ROUTES ====================
+  /admin/routes:
+    post:
+      tags:
+        - Admin - Routes
+      summary: Create new route (Admin only)
+      description: Create a new route in the system
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - route_id
+                - name
+              properties:
+                route_id:
+                  type: integer
+                  example: 10
+                name:
+                  type: string
+                  example: "Galle to Matara"
+      responses:
+        '201':
+          description: Route created successfully
+        '400':
+          description: Validation error or route already exists
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+  
+  /admin/routes/{route_id}:
+    put:
+      tags:
+        - Admin - Routes
+      summary: Update route (Admin only)
+      description: Update route details
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: route_id
+          required: true
+          schema:
+            type: integer
+          description: Route ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: "Galle to Matara Express"
+      responses:
+        '200':
+          description: Route updated successfully
+        '400':
+          description: Validation error
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+        '404':
+          description: Route not found
+    
+    delete:
+      tags:
+        - Admin - Routes
+      summary: Delete route (Admin only)
+      description: Delete a route (only if no buses assigned)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: route_id
+          required: true
+          schema:
+            type: integer
+          description: Route ID
+      responses:
+        '200':
+          description: Route deleted successfully
+        '400':
+          description: Cannot delete route with assigned buses
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+        '404':
+          description: Route not found
+
+  # ==================== ADMIN - DASHBOARD ====================
+  /admin/stats:
+    get:
+      tags:
+        - Admin - Dashboard
+      summary: Get dashboard statistics (Admin only)
+      description: Get system statistics including user counts, bus counts, etc.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    type: object
+                    properties:
+                      totalUsers:
+                        type: integer
+                      totalBuses:
+                        type: integer
+                      totalRoutes:
+                        type: integer
+                      activeUsers:
+                        type: integer
+                      inactiveUsers:
+                        type: integer
+                      usersByRole:
+                        type: object
+                        properties:
+                          user:
+                            type: integer
+                          operator:
+                            type: integer
+                          admin:
+                            type: integer
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized (admin only)
+
+  # ==================== PUBLIC ROUTES ====================
+  /routes:
+    get:
+      tags:
+        - Routes
+      summary: List all routes
+      description: Get all available bus routes
+      responses:
+        '200':
+          description: Array of routes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    route_id:
+                      type: integer
+                    name:
+                      type: string
+  /routes/{route_id}:
+    get:
+      tags:
+        - Routes
+      summary: Get route by ID
+      description: Get detailed information about a specific route
+      parameters:
+        - name: route_id
+          in: path
+          required: true
+          schema: 
+            type: integer
+          description: Route ID
+      responses:
+        '200': 
+          description: Route object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  route_id:
+                    type: integer
+                  name:
+                    type: string
+        '404': 
+          description: Route not found
+  /routes/{route_id}/schedule:
+    get:
+      tags:
+        - Routes
+      summary: Get generated schedule with fixed headway
+      description: Generate bus schedule for a route based on headway (time between buses)
+      parameters:
+        - name: route_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, example: '2025-10-07' }
+        - name: headway
+          in: query
+          required: false
+          schema: { type: integer, default: 45 }
+        - name: start
+          in: query
+          required: false
+          schema: { type: string, example: '05:00' }
+        - name: end
+          in: query
+          required: false
+          schema: { type: string, example: '22:00' }
+      responses:
+        '200':
+          description: Array of trips (bus_id, route_id, start_time, start_city, end_city)
+  /buses:
+    get:
+      tags:
+        - Buses
+      summary: List buses (optional filter by route and date)
+      description: Get all buses, optionally filtered by route and date
+      parameters:
+        - in: query
+          name: route_id
+          schema: { type: integer }
+        - in: query
+          name: date
+          schema: { type: string, example: '2025-10-07' }
+      responses:
+        '200': { description: Array of buses }
+  /buses/{bus_id}:
+    get:
+      tags:
+        - Buses
+      summary: Get a single bus (full doc)
+      description: Get detailed information about a specific bus
+      parameters:
+        - in: path
+          name: bus_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Bus doc }
+        '404': { description: Not found }
+  /buses/{bus_id}/location:
+    get:
+      tags:
+        - Buses
+      summary: Get bus location
+      description: Get current GPS location of a specific bus
+      parameters:
+        - in: path
+          name: bus_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Location }
+        '404': { description: Not found }
+    patch:
+      tags:
+        - Buses
+      summary: Update bus location (operator)
+      description: Update bus GPS location (requires OPERATOR_API_KEY)
+      parameters:
+        - in: path
+          name: bus_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude]
+              properties:
+                latitude: { type: number }
+                longitude: { type: number }
+      responses:
+        '200': { description: Updated }
+        '401': { description: Unauthorized }
+        '404': { description: Not found }
+      security:
+        - apiKeyHeader: []
+  /buses/{bus_id}/status:
+    get:
+      tags:
+        - Buses
+      summary: Get bus status
+      description: Get current status of a specific bus (On Time or Delayed)
+      parameters:
+        - in: path
+          name: bus_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Status }
+        '404': { description: Not found }
+    patch:
+      tags:
+        - Buses
+      summary: Update bus status (operator)
+      description: Update bus status (requires OPERATOR_API_KEY)
+      parameters:
+        - in: path
+          name: bus_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: ["On Time", "Delayed"]
+      responses:
+        '200': { description: Updated }
+        '401': { description: Unauthorized }
+        '404': { description: Not found }
+      security:
+        - apiKeyHeader: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login endpoint
+    apiKeyHeader:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for bus operators (OPERATOR_API_KEY)
+  
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        email:
+          type: string
+          example: "user@example.com"
+        name:
+          type: string
+          example: "John Doe"
+        role:
+          type: string
+          enum: [user, operator, admin]
+          example: "user"
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        lastLogin:
+          type: string
+          format: date-time
+    
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          example: "admin@bustrack.com"
+        password:
+          type: string
+          example: "admin123456"
+    
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          example: "user@example.com"
+        password:
+          type: string
+          example: "password123"
+        name:
+          type: string
+          example: "John Doe"
+        role:
+          type: string
+          enum: [user, operator, admin]
+          example: "user"
+    
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Login successful"
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: '#/components/schemas/User'
+    
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Error message"
+        errors:
+          type: array
+          items:
+            type: object
