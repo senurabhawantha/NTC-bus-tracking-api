@@ -114,6 +114,120 @@ exports.getRouteSchedule = async (req, res) => {
   }
 };
 
+/**
+ * POST /routes (admin only)
+ * Create a new route
+ */
+exports.createRoute = async (req, res) => {
+  try {
+    const { route_id, name } = req.body;
+    
+    // Validate required fields
+    if (!route_id || !name) {
+      return res.status(400).json({ 
+        message: 'route_id and name are required' 
+      });
+    }
+    
+    // Check if route already exists
+    const existingRoute = await Route.findOne({ route_id: Number(route_id) });
+    if (existingRoute) {
+      return res.status(400).json({ 
+        message: 'Route with this ID already exists' 
+      });
+    }
+    
+    const route = new Route({
+      route_id: Number(route_id),
+      name
+    });
+    
+    await route.save();
+    
+    res.status(201).json({
+      message: 'Route created successfully',
+      route
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ 
+      message: 'Error creating route',
+      error: err.message 
+    });
+  }
+};
+
+/**
+ * PUT /routes/:route_id (admin only)
+ * Update a route
+ */
+exports.updateRoute = async (req, res) => {
+  try {
+    const route_id = Number(req.params.route_id);
+    const { name } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ 
+        message: 'name is required' 
+      });
+    }
+    
+    const route = await Route.findOne({ route_id });
+    if (!route) {
+      return res.status(404).json({ message: 'Route not found' });
+    }
+    
+    route.name = name;
+    await route.save();
+    
+    res.json({
+      message: 'Route updated successfully',
+      route
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ 
+      message: 'Error updating route',
+      error: err.message 
+    });
+  }
+};
+
+/**
+ * DELETE /routes/:route_id (admin only)
+ * Delete a route
+ */
+exports.deleteRoute = async (req, res) => {
+  try {
+    const route_id = Number(req.params.route_id);
+    
+    // Check if any buses are assigned to this route
+    const busCount = await Bus.countDocuments({ route_id });
+    if (busCount > 0) {
+      return res.status(400).json({ 
+        message: `Cannot delete route. ${busCount} bus(es) are assigned to this route.` 
+      });
+    }
+    
+    const route = await Route.findOneAndDelete({ route_id });
+    
+    if (!route) {
+      return res.status(404).json({ message: 'Route not found' });
+    }
+    
+    res.json({
+      message: 'Route deleted successfully',
+      deletedRouteId: route_id
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ 
+      message: 'Error deleting route',
+      error: err.message 
+    });
+  }
+};
+
 
 
 
