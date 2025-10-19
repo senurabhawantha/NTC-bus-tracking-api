@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 
 const tripSchema = new mongoose.Schema(
   {
-    route_id: { type: Number, required: true, index: true }, // matches models/route.js
-    bus_id:   { type: Number, required: true, index: true }, // matches models/bus.js
+    route_id: { type: Number, required: true, index: true }, // matches your numeric style
+    bus_id:   { type: Number, required: true, index: true }, // matches your numeric style
     startTime: { type: Date, required: true },
     endTime:   { type: Date },
     status: {
