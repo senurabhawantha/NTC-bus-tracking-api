@@ -15,6 +15,10 @@ const Route = require('./models/route');
 const busRoutes = require('./routes/busRoutes');
 const routeRoutes = require('./routes/routeRoutes');
 const geocodeRoutes = require('./routes/geocodeRoutes');
+const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const publicRoutes = require('./routes/publicRoutes');
+
 
 const app = express();
 
@@ -39,6 +43,9 @@ try {
 // === API ROUTES ===
 app.use('/buses', busRoutes);
 app.use('/routes', routeRoutes);
+app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
+app.use('/public', publicRoutes);
 
 // geocode limiter
 const geocodeLimiter = rateLimit({
