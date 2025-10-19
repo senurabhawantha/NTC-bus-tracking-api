@@ -5,11 +5,11 @@ const {
   getUpcomingTrips,
   getActiveTrips,
   getTrip,
+  getBusSummary,
   getBusLocation,
   getBusLocationHistory,
   getBusesNearby,
-  getActiveLocations,
-  getBusSummary
+  getActiveLocations
 } = require('../controllers/publicController');
 
 const router = express.Router();
