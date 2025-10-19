@@ -3,16 +3,13 @@ const jwt = require('jsonwebtoken');
 const Admin = require('../models/admin');
 
 function sign(id) {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '30d'
-  });
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '30d' });
 }
 
 async function login(req, res) {
   const { username, password } = req.body || {};
-  if (!username || !password) {
-    return res.status(400).json({ message: 'username & password required' });
-  }
+  if (!username || !password) return res.status(400).json({ message: 'username & password required' });
+
   const admin = await Admin.findOne({ username }).select('+password');
   if (!admin) return res.status(401).json({ message: 'Invalid credentials' });
 
