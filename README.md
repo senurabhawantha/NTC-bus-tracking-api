@@ -2,12 +2,6 @@
 
 # NTC Bus Tracking API 🚌
 
-**NIBM Index:** YR4COBSCCOMP232P-032  
-**NIBM Registered Name:** R.L.A. Senura Bhawantha  
-**Coventry Index:** 14945892
-
----
-
 ## 🎯 Overview
 
 A comprehensive RESTful API for real-time bus tracking with **JWT authentication**, **role-based access control**, and **full admin CRUD operations**. Built with Node.js, Express, MongoDB, and JWT.
